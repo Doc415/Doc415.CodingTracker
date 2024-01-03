@@ -4,16 +4,9 @@ namespace Doc415.CodingTracker;
 
 internal class Program
 {
-    static public string connectionString;
-    static void Main(string[] args)
+        static void Main(string[] args)
     {
-        IConfiguration configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
-            .Build();
-
-        connectionString = configuration.GetSection("ConnectionStrings")["DefaultConnection"];
-
-        var DataAccess = new DataAccess(connectionString);
+        var DataAccess = new DataAccess();
 
         DataAccess.CreateDatabase();
 

@@ -1,14 +1,20 @@
 ﻿using Dapper;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 
 namespace Doc415.CodingTracker;
 
 internal class DataAccess
 {
+    IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+
     private string ConnectionString;
-    public DataAccess(string _connectionString)
+
+    public DataAccess()
     {
-        ConnectionString = _connectionString;
+        ConnectionString = configuration.GetSection("ConnectionStrings")["DefaultConnection"];
     }
     internal void CreateDatabase()
     {
