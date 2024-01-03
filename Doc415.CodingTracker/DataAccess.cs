@@ -29,7 +29,6 @@ internal class DataAccess
             connection.Execute(createTableQuery);
         }
     }
-
     internal void InsertRecord(CodingRecord record)
     {
         using (var connection = new SqliteConnection(ConnectionString))
@@ -43,4 +42,37 @@ internal class DataAccess
             connection.Execute(insertQuery, new { record.DateStart, record.DateEnd });
         }
     }
+    internal IEnumerable<CodingRecord> GetAllRecords()
+    {
+        using (var connection = new SqliteConnection(ConnectionString))
+        {
+            connection.Open();
+
+            string selectQuery = "SELECT * FROM records";
+
+            var records = connection.Query<CodingRecord>(selectQuery);
+
+            foreach (var record in records)
+            {
+                record.Duration = record.DateEnd - record.DateStart;
+            }
+
+            return records;
+        }
+    }
+
+     internal void UpdateRecord(CodingRecord updatedRecord)
+ {
+     using (var connection = new SqliteConnection(ConnectionString))
+     {
+         connection.Open();
+
+         string updateQuery = @"
+     UPDATE records
+     SET DateStart = @DateStart, DateEnd = @DateEnd
+     WHERE Id = @Id";
+
+         connection.Execute(updateQuery, new { updatedRecord.DateStart, updatedRecord.DateEnd, updatedRecord.Id });
+     }
+ }
 }

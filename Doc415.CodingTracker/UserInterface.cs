@@ -1,5 +1,6 @@
 ﻿using Doc415.CodingTracker;
 using Spectre.Console;
+using System.Diagnostics;
 using System.Globalization;
 using static Doc415.CodingTracker.Enums;
 internal static class UserInterface
@@ -16,7 +17,8 @@ internal static class UserInterface
              .PageSize(10)
              .MoreChoicesText("Use arrow keys for more selection")
              .AddChoices(
-                MainMenuSelections.AddRecord
+                MainMenuSelections.LiveCodingSession
+              , MainMenuSelections.AddRecord
               , MainMenuSelections.ViewRecords
               , MainMenuSelections.DeleteRecord
               , MainMenuSelections.UpdateRecord,
@@ -25,18 +27,34 @@ internal static class UserInterface
 
             switch (selection)
             {
+                case MainMenuSelections.LiveCodingSession:
+                    StartLiveSession();
+                    Console.Clear();
+                    break;
+
                 case MainMenuSelections.AddRecord:
+                    Console.WriteLine(MainMenuSelections.AddRecord);
                     AddRecord();
+                    Console.Clear();
                     break;
+
                 case MainMenuSelections.ViewRecords:
-                    ViewRecords();
+                    var dataAccess = new DataAccess();
+                    var records = dataAccess.GetAllRecords();
+                    ViewRecords(records);
+                    Console.Clear() ;
                     break;
+
                 case MainMenuSelections.DeleteRecord:
                     DeleteRecord();
+                    Console.Clear();
                     break;
+
                 case MainMenuSelections.UpdateRecord:
                     UpdateRecord();
+                    Console.Clear();
                     break;
+
                 case MainMenuSelections.Quit:
                     Console.Clear();
                     AnsiConsole.Write(new FigletText("Goodbye").LeftJustified().Color(Color.Yellow));
@@ -44,6 +62,44 @@ internal static class UserInterface
                     break;
             }
         }
+    }
+
+    private static void StartLiveSession()
+    {
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+        DateTime sessionStart = DateTime.Now;
+        Console.Clear();
+        Console.CursorVisible = false;
+        bool exit = false;
+        Task.Factory.StartNew(() =>
+        {
+            while (Console.ReadKey().Key != ConsoleKey.Enter) ;
+            exit = true;
+        });
+
+        while (!exit)
+        {
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            Console.SetCursorPosition(0, 0);
+            AnsiConsole.Write(new FigletText(string.Format("{0} : {1} : {2}  ", elapsedTime.Hours, elapsedTime.Minutes, elapsedTime.Seconds % 60)).Color(Color.Chartreuse1));
+            AnsiConsole.Markup("[DarkMagenta]Press Enter to end session...[/]");
+        }
+        stopwatch.Stop();
+        Console.Clear();
+        Console.CursorVisible = true;
+
+        DateTime sessionEnd = DateTime.Now;
+        CodingRecord record = new CodingRecord();
+        record.DateStart = sessionStart;
+        record.DateEnd = sessionEnd;
+        DataAccess dataAccess = new DataAccess();
+        dataAccess.InsertRecord(record);
+
+        TimeSpan sessionTime = sessionEnd - sessionStart;
+        AnsiConsole.Write($"Session ended.\nTotal session time: {sessionTime.Hours}:{sessionTime.Minutes}:{sessionTime.Seconds}\n\nSession recorded.\n\nPress Enter to return main menu...");
+        Console.ReadLine();
+        Console.Clear();
     }
     private static void AddRecord()
     {
@@ -55,11 +111,27 @@ internal static class UserInterface
 
         var dataAccess = new DataAccess();
         dataAccess.InsertRecord(record);
+        Console.Clear() ;
     }
 
-    private static void ViewRecords()
+    private static void ViewRecords(IEnumerable<CodingRecord> records,bool isToBeCleared=true)
     {
+        var table = new Table();
+        table.AddColumn("Id");
+        table.AddColumn("Start Date");
+        table.AddColumn("End Date");
+        table.AddColumn("Duration");
 
+        foreach (var record in records)
+        {
+            table.AddRow(record.Id.ToString(), record.DateStart.ToString(), record.DateEnd.ToString(), string.Format("{0:N0} hours {1:N0} minutes", record.Duration.TotalHours, record.Duration.TotalMinutes % 60));
+        }
+
+        AnsiConsole.Write(table);
+        Console.Write("Press Enter to continue...");
+        Console.ReadLine();
+        if (isToBeCleared) 
+            Console.Clear();
     }
 
     private static void DeleteRecord()
@@ -69,14 +141,40 @@ internal static class UserInterface
 
     private static void UpdateRecord()
     {
+        var dataAccess = new DataAccess();
+        var records = dataAccess.GetAllRecords();
+        ViewRecords(records,false);
 
+        var id = GetNumber("Please type the id of the record you want to update.");
+
+        var record = records.Where(x => x.Id == id).Single();
+        var dates = GetDateInputs();
+
+        record.DateStart = dates[0];
+        record.DateEnd = dates[1];
+
+        dataAccess.UpdateRecord(record);
     }
 
+    private static int GetNumber(string message)
+    {
+        string numberInput = AnsiConsole.Ask<string>(message);
+
+        if (numberInput == "0") Console.Clear(); MainMenu();
+
+        int output = 0;
+        while (!int.TryParse(numberInput, out output) || Convert.ToInt32(numberInput) < 0)
+        {
+            numberInput = AnsiConsole.Ask<string>("Invalid number: " + message);
+        }
+
+        return output;
+    }
     private static DateTime[] GetDateInputs()
     {
         var startDateInput = AnsiConsole.Ask<string>("Input Start Date with the format: dd-mm-yy hh:mm (24 hour clock). Or enter 0 to return to main menu.");
 
-        if (startDateInput == "0") MainMenu();
+        if (startDateInput == "0") Console.Clear(); MainMenu();
 
         DateTime startDate;
         while (!DateTime.TryParseExact(startDateInput, "dd-MM-yy HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out startDate))
@@ -86,7 +184,7 @@ internal static class UserInterface
 
         var endDateInput = AnsiConsole.Ask<string>("Input End Date with the format: dd-mm-yy hh:mm (24 hour clock). Or enter 0 to return to main menu.");
 
-        if (endDateInput == "0") MainMenu();
+        if (endDateInput == "0") Console.Clear(); MainMenu();
 
         DateTime endDate;
         while (!DateTime.TryParseExact(endDateInput, "dd-MM-yy HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out endDate))
