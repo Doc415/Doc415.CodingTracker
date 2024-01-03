@@ -53,7 +53,7 @@ internal static class UserInterface
         record.DateStart = dateInputs[0];
         record.DateEnd = dateInputs[1];
 
-        var dataAccess = new DataAccess(Program.connectionString);
+        var dataAccess = new DataAccess();
         dataAccess.InsertRecord(record);
     }
 
