@@ -6,7 +6,7 @@ internal class Enums
 {
     public enum MainMenuSelections
     {
-        [Display(Name ="Start live coding session")]
+        [Display(Name = "Start live coding session")]
         LiveCodingSession,
         [Display(Name = "Add new record")]
         AddRecord,
@@ -16,6 +16,8 @@ internal class Enums
         DeleteRecord,
         [Display(Name = "Update record")]
         UpdateRecord,
+        [Display(Name = "Statistics")]
+        Statistics,
         Quit
     }
 }

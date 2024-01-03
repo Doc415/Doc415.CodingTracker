@@ -7,7 +7,7 @@ internal class Program
         var DataAccess = new DataAccess();
 
         DataAccess.CreateDatabase();
-
+        SeedData.SeedRecords(20);
         UserInterface.MainMenu();
     }
 }

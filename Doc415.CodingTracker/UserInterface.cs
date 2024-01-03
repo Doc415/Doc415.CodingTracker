@@ -21,7 +21,8 @@ internal static class UserInterface
               , MainMenuSelections.AddRecord
               , MainMenuSelections.ViewRecords
               , MainMenuSelections.DeleteRecord
-              , MainMenuSelections.UpdateRecord,
+              , MainMenuSelections.UpdateRecord
+              , MainMenuSelections.Statistics,
                 MainMenuSelections.Quit)
              );
 
@@ -42,7 +43,7 @@ internal static class UserInterface
                     var dataAccess = new DataAccess();
                     var records = dataAccess.GetAllRecords();
                     ViewRecords(records);
-                    Console.Clear() ;
+                    Console.Clear();
                     break;
 
                 case MainMenuSelections.DeleteRecord:
@@ -52,6 +53,11 @@ internal static class UserInterface
 
                 case MainMenuSelections.UpdateRecord:
                     UpdateRecord();
+                    Console.Clear();
+                    break;
+
+                case MainMenuSelections.Statistics:
+                    Statistics();
                     Console.Clear();
                     break;
 
@@ -111,10 +117,10 @@ internal static class UserInterface
 
         var dataAccess = new DataAccess();
         dataAccess.InsertRecord(record);
-        Console.Clear() ;
+        Console.Clear();
     }
 
-    private static void ViewRecords(IEnumerable<CodingRecord> records,bool isToBeCleared=true)
+    private static void ViewRecords(IEnumerable<CodingRecord> records, bool isToBeCleared = true)
     {
         var table = new Table();
         table.AddColumn("Id");
@@ -130,20 +136,45 @@ internal static class UserInterface
         AnsiConsole.Write(table);
         Console.Write("Press Enter to continue...");
         Console.ReadLine();
-        if (isToBeCleared) 
+        if (isToBeCleared)
             Console.Clear();
     }
 
     private static void DeleteRecord()
     {
+        var dataAccess = new DataAccess();
+        var records = dataAccess.GetAllRecords();
+        if (records.Count() > 0)
+        {
+            var notValidId = true;
+            CodingRecord record;
+            do
+            {
+                ViewRecords(records, false);
 
+                var id = GetNumber("Please type the id of the record you want to delete.");
+                try
+                {
+                    record = records.Where(x => x.Id == id).Single();
+                    notValidId = false;
+                    dataAccess.DeleteRecord(record.Id);
+
+                }
+                catch
+                {
+                    Console.WriteLine("There is no record with that Id, please enter a valid Id.\nPress Enter to continue...");
+                    Console.ReadLine();
+                }
+            } while (notValidId);
+        }
+        else Console.WriteLine("There is no record !");
     }
 
     private static void UpdateRecord()
     {
         var dataAccess = new DataAccess();
         var records = dataAccess.GetAllRecords();
-        ViewRecords(records,false);
+        ViewRecords(records, false);
 
         var id = GetNumber("Please type the id of the record you want to update.");
 
@@ -156,11 +187,54 @@ internal static class UserInterface
         dataAccess.UpdateRecord(record);
     }
 
+    private static void Statistics()
+    {
+        Console.WriteLine("Enter the starting and ending days");
+        var dates = GetDateInputs();
+        var dataAccess = new DataAccess();
+        var records = dataAccess.GetRecordsBetween(dates[0], dates[1]);
+
+        if (records.Count() > 0)
+        {
+            var table = new Table();
+            table.AddColumn("Id");
+            table.AddColumn("Start Date");
+            table.AddColumn("End Date");
+            table.AddColumn("Duration");
+
+            TimeSpan total = TimeSpan.Zero;
+            TimeSpan average = TimeSpan.Zero;
+            TimeSpan best = TimeSpan.Zero;
+            foreach (var record in records)
+            {
+                table.AddRow(record.Id.ToString(), record.DateStart.ToString(), record.DateEnd.ToString(), string.Format("{0:N0} hours {1:N0} minutes", record.Duration.TotalHours, record.Duration.TotalMinutes % 60));
+                total += record.Duration;
+                if (record.Duration > best)
+                    best = record.Duration;
+            }
+            average = total / records.Count();
+            string totals = string.Format("[purple] Total coding time: {0:N0}:{1:N0}:{2:N0}[/]", (total.Days / 24) + total.Hours, total.Minutes, total.Seconds);
+            string bests = string.Format("[red] Your best time: {0:N0}:{1:N0}:{2:N0}[/]", best.Hours, best.Minutes, best.Seconds);
+            string averages = string.Format("[blue] Average coding time: {0:N0}:{1:N0}:{2:N0}[/]", average.Hours, average.Minutes, average.Seconds);
+
+            AnsiConsole.Write(table);
+            AnsiConsole.Markup($"{totals}\n" +
+                               $"{bests}\n" +
+                               $"{averages}\n");
+            Console.Write("Press Enter to continue...");
+            Console.ReadLine();
+        }
+        else
+        {
+            Console.WriteLine("There are no records between given dates\nPress Enter to continue...");
+        }
+    }
+
     private static int GetNumber(string message)
     {
         string numberInput = AnsiConsole.Ask<string>(message);
 
-        if (numberInput == "0") Console.Clear(); MainMenu();
+        if (numberInput == "0") { Console.Clear(); MainMenu(); }
 
         int output = 0;
         while (!int.TryParse(numberInput, out output) || Convert.ToInt32(numberInput) < 0)
@@ -174,7 +248,7 @@ internal static class UserInterface
     {
         var startDateInput = AnsiConsole.Ask<string>("Input Start Date with the format: dd-mm-yy hh:mm (24 hour clock). Or enter 0 to return to main menu.");
 
-        if (startDateInput == "0") Console.Clear(); MainMenu();
+        if (startDateInput == "0") { Console.Clear(); MainMenu(); }
 
         DateTime startDate;
         while (!DateTime.TryParseExact(startDateInput, "dd-MM-yy HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out startDate))
@@ -184,7 +258,7 @@ internal static class UserInterface
 
         var endDateInput = AnsiConsole.Ask<string>("Input End Date with the format: dd-mm-yy hh:mm (24 hour clock). Or enter 0 to return to main menu.");
 
-        if (endDateInput == "0") Console.Clear(); MainMenu();
+        if (endDateInput == "0") { Console.Clear(); MainMenu(); }
 
         DateTime endDate;
         while (!DateTime.TryParseExact(endDateInput, "dd-MM-yy HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out endDate))
