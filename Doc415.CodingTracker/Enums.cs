@@ -1,19 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace Doc415.CodingTracker
+namespace Doc415.CodingTracker;
+
+internal class Enums
 {
-    internal class Enums
+    public enum MainMenuSelections
     {
-        public enum MainMenuSelections
-        {
-            StartNewSession,
-            ListTodaysSessions,
-            Statistics,
-            QuitProgram
-        }
+        [Display(Name = "Add new record")]
+        AddRecord,
+
+        [Display(Name = "View records")]
+        ViewRecords,
+
+        [Display(Name = "Delete record")]
+        DeleteRecord,
+
+        [Display(Name = "Update record")]
+        UpdateRecord,
+
+        Quit
     }
 }

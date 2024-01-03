@@ -1,15 +1,22 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
 using System.Configuration;
-using System.Collections.Specialized;
-namespace Doc415.CodingTracker
-{
-    internal class Program
-    {
-        static void Main(string[] args)
-        {
-           string sAttr = ConfigurationManager.AppSettings.Get("Key0");
+namespace Doc415.CodingTracker;
 
-            Console.WriteLine(sAttr);
-        }
+internal class Program
+{
+    static public string connectionString;
+    static void Main(string[] args)
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+
+        connectionString = configuration.GetSection("ConnectionStrings")["DefaultConnection"];
+
+        var DataAccess = new DataAccess(connectionString);
+
+        DataAccess.CreateDatabase();
+
+        UserInterface.MainMenu();
     }
 }
