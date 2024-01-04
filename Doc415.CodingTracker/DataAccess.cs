@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
+using Spectre.Console;
 
 namespace Doc415.CodingTracker;
 
@@ -17,7 +18,7 @@ internal class DataAccess
         ConnectionString = configuration.GetSection("ConnectionStrings")["DefaultConnection"];
     }
     internal void CreateDatabase()
-    {
+    {   
         using (var connection = new SqliteConnection(ConnectionString))
         {
             connection.Open();
@@ -28,6 +29,22 @@ internal class DataAccess
                     DateEnd TEXT NOT NULL)";
             connection.Execute(createTableQuery);
         }
+        CreateGoalsTable();
+    }
+
+    internal void CreateGoalsTable()
+    {
+        using (var connection = new SqliteConnection(ConnectionString))
+        {
+            connection.Open();
+            string addGoalsTable = @"CREATE TABLE IF NOT EXISTS goals(
+                            startDate TEXT NOT NULL,
+                            endDate TEXT NOT NULL,
+                            codingGoal TEXT NOT NULL,
+                            Id INTEGER PRIMARY KEY AUTOINCREMENT)";
+            connection.Execute(addGoalsTable);
+        }
+
     }
     internal void InsertRecord(CodingRecord record)
     {
@@ -108,6 +125,7 @@ internal class DataAccess
         }
     }
 
+
     internal void BulkInsertRecords(List<CodingRecord> records)
     {
         using (var connection = new SqliteConnection(ConnectionString))
@@ -125,6 +143,39 @@ internal class DataAccess
                 record.DateStart,
                 record.DateEnd
             }));
+        }
+    }
+
+    internal void AddGoal(Goal _goal)
+    {
+        using (var connection = new SqliteConnection(ConnectionString))
+        {
+            connection.Open();
+
+            string insertGoal = @"
+        INSERT INTO goals (startDate, endDate, codingGoal)
+        VALUES (@startDate, @endDate,@codingGoal)";
+
+            // Execute the query for each record in the collection
+            connection.Execute(insertGoal, new
+            {
+                startDate = _goal.startDate,
+                endDate = _goal.endDate,
+                codingGoal = _goal.codingGoal
+            });
+        }
+    }
+
+    internal IEnumerable<Goal> GetGoals()
+    {
+        using (var connection = new SqliteConnection(ConnectionString))
+        {
+            connection.Open();
+
+            string selectQuery = "SELECT * FROM goals";
+
+            var records = connection.Query<Goal>(selectQuery);
+            return records;
         }
     }
 }

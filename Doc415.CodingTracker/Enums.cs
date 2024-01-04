@@ -8,6 +8,8 @@ internal class Enums
     {
         [Display(Name = "Start live coding session")]
         LiveCodingSession,
+        [Display(Name = "Set goals")]
+        SetGoal,
         [Display(Name = "Add new record")]
         AddRecord,
         [Display(Name = "View records")]
@@ -18,6 +20,8 @@ internal class Enums
         UpdateRecord,
         [Display(Name = "Statistics")]
         Statistics,
+        [Display(Name = "Report Goal")]
+        ReportGoals,
         Quit
     }
 }

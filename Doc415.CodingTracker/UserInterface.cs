@@ -5,6 +5,7 @@ using System.Globalization;
 using static Doc415.CodingTracker.Enums;
 internal static class UserInterface
 {
+    static GoalTracker theGoalTracker = new();
     public static void MainMenu()
     {
         var isMenuRunning = true;
@@ -22,7 +23,9 @@ internal static class UserInterface
               , MainMenuSelections.ViewRecords
               , MainMenuSelections.DeleteRecord
               , MainMenuSelections.UpdateRecord
-              , MainMenuSelections.Statistics,
+              , MainMenuSelections.Statistics
+              , MainMenuSelections.SetGoal
+              , MainMenuSelections.ReportGoals,
                 MainMenuSelections.Quit)
              );
 
@@ -61,6 +64,15 @@ internal static class UserInterface
                     Console.Clear();
                     break;
 
+                case MainMenuSelections.SetGoal:
+                    SetGoal();
+                    Console.Clear();
+                    break;
+
+                case MainMenuSelections.ReportGoals:
+                    ReportGoals();
+                    break;
+
                 case MainMenuSelections.Quit:
                     Console.Clear();
                     AnsiConsole.Write(new FigletText("Goodbye").LeftJustified().Color(Color.Yellow));
@@ -80,7 +92,10 @@ internal static class UserInterface
         bool exit = false;
         Task.Factory.StartNew(() =>
         {
-            while (Console.ReadKey().Key != ConsoleKey.Enter) ;
+            while (Console.ReadKey().Key != ConsoleKey.Enter)
+            {
+                exit = false;
+            }
             exit = true;
         });
 
@@ -88,7 +103,7 @@ internal static class UserInterface
         {
             TimeSpan elapsedTime = stopwatch.Elapsed;
             Console.SetCursorPosition(0, 0);
-            AnsiConsole.Write(new FigletText(string.Format("{0} : {1} : {2}  ", elapsedTime.Hours, elapsedTime.Minutes, elapsedTime.Seconds % 60)).Color(Color.Chartreuse1));
+            AnsiConsole.Write(new FigletText(string.Format("{0} : {1} : {2}       ", elapsedTime.Hours, elapsedTime.Minutes, elapsedTime.Seconds % 60)).Color(Color.Chartreuse1));
             AnsiConsole.Markup("[DarkMagenta]Press Enter to end session...[/]");
         }
         stopwatch.Stop();
@@ -227,6 +242,103 @@ internal static class UserInterface
         else
         {
             Console.WriteLine("There are no records between given dates\nPress Enter to continue...");
+        }
+    }
+
+    private static void SetGoal()
+    {
+        Console.Clear();
+        Console.WriteLine("Enter start date and end date of period:");
+        var dateInputs = GetDateInputs();
+        Console.WriteLine("Enter how many coding hours you want to set goal to these days:");
+        bool isValidEntry = false;
+        int codingHours = 0;
+        do
+        {
+            isValidEntry = int.TryParse(Console.ReadLine(), out codingHours);
+            if (!isValidEntry)
+                Console.WriteLine("Enter valid input for hours:");
+
+        } while (!isValidEntry);
+
+        TimeSpan goalTS = TimeSpan.FromHours(codingHours);
+
+        Goal newGoal = new Goal();
+        newGoal.startDate = dateInputs[0].ToString();
+        newGoal.endDate = dateInputs[1].ToString();
+        newGoal.codingGoal = codingHours.ToString();
+
+        theGoalTracker.AddGoal(newGoal);
+
+    }
+
+    private static void getAllGoals()
+    {
+        DataAccess dataAccess = new DataAccess();
+        var goals = dataAccess.GetGoals();
+        foreach (var goal in goals)
+        {
+            Console.WriteLine(goal.codingGoal);
+        }
+        Console.ReadLine();
+    }
+
+    private static void ReportGoals()
+    {
+        DataAccess dataAccess = new DataAccess();
+        Console.Clear();
+        var goals = dataAccess.GetGoals();
+        if (goals.Count() < 1)
+        {
+            Console.WriteLine("There are no goals set\nPress Enter to continue...");
+            Console.ReadLine();
+            Console.Clear();
+        }
+        else
+        {
+            foreach (Goal goal in goals)
+            {
+                DateTime startDate = DateTime.Now;
+                DateTime endDate = DateTime.Now;
+                string[] goalStartDate = goal.startDate.Split('.', ' ', ':');
+                string[] goalEndDate = goal.endDate.Split('.', ' ', ':');
+                goalStartDate[2] = goalStartDate[2].Substring(2);
+                goalEndDate[2] = goalEndDate[2].Substring(2);
+
+
+                for (int i = 0; i < goalStartDate.Length; i++)
+                {
+                    if (goalStartDate[i].Length < 2)
+                        goalStartDate[i] = "0" + goalStartDate[i];
+                }
+
+                for (int i = 0; i < goalEndDate.Length; i++)
+                {
+                    if (goalEndDate[i].Length < 2)
+                        goalEndDate[i] = "0" + goalEndDate[i];
+                }
+                string newgoalStartDate = goalStartDate[0] + "-" + goalStartDate[1] + "-" + goalStartDate[2] + " " + goalStartDate[3] + ":" + goalStartDate[4];
+                string newgoalendDate = goalEndDate[0] + "-" + goalEndDate[1] + "-" + goalEndDate[2] + " " + goalEndDate[3] + ":" + goalEndDate[4];
+
+                Console.WriteLine($"Target coding time between {goal.startDate} and {goal.endDate}  is {goal.codingGoal} hours");
+
+                var startbool = DateTime.TryParseExact(newgoalStartDate, "dd-MM-yy HH:mm", CultureInfo.InvariantCulture,
+                                                        DateTimeStyles.None, out startDate);
+                var endbool = DateTime.TryParseExact(newgoalendDate, "dd-MM-yy HH:mm", CultureInfo.InvariantCulture,
+                                                    DateTimeStyles.None, out endDate);
+                var records = dataAccess.GetRecordsBetween(startDate, endDate);
+                decimal total = 0;
+
+                foreach (var record in records)
+                {
+                    total += record.Duration.Hours;
+                }
+                var valid = int.TryParse(goal.codingGoal, out int target);
+                decimal percentage = total / target;
+                Console.WriteLine(string.Format("You have achived {0} hours ({1:p})", total, percentage));
+            }
+            Console.ReadLine();
+            Console.Clear();
         }
     }
 
