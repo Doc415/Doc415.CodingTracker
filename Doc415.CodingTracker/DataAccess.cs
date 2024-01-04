@@ -18,7 +18,7 @@ internal class DataAccess
         ConnectionString = configuration.GetSection("ConnectionStrings")["DefaultConnection"];
     }
     internal void CreateDatabase()
-    {   
+    {
         using (var connection = new SqliteConnection(ConnectionString))
         {
             connection.Open();
